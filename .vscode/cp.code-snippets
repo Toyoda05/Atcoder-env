@@ -1,0 +1,20 @@
+{
+  "Python DSU import": {
+    "scope": "python",
+    "prefix": "cpdsu",
+    "body": ["from cp_lib.dsu import DSU", "", "uf = DSU(${1:n})"],
+    "description": "自作Union-Findを使用（提出前にCP: Prepare submission）"
+  },
+  "C++ DSU": {
+    "scope": "cpp",
+    "prefix": "cpdsu",
+    "body": ["#include \"cp/dsu.hpp\""],
+    "description": "自作Union-Findヘッダ"
+  },
+  "C++ ACL": {
+    "scope": "cpp",
+    "prefix": "cpacl",
+    "body": ["#include <atcoder/${1:dsu}>"],
+    "description": "AC Library（提出時に自動展開）"
+  }
+}

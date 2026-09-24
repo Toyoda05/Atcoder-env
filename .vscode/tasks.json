@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "CP: New problem",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "new", "${input:problemUrl}", "--lang", "${input:language}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "CP: Test active file",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "test", "${file}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": {"kind": "build", "isDefault": true},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CP: Run with input.txt",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "run", "${file}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CP: Prepare submission (bundle + test)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "prepare", "${file}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CP: Copy tested submission",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "copy", "${file}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CP: Open problem page",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "open", "${file}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "CP: Download samples",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "download", "${file}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "CP: Submit via oj (login required)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "submit", "${file}", "--language", "${input:judgeLanguageId}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "presentation": {"reveal": "always", "focus": true},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CP: Build debug active C++",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "build", "${file}", "--debug"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CP: Check environment",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "doctor"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "CP: Test libraries and tools",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "unittest", "discover", "-s", "tests", "-v"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": "test",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {"id": "problemUrl", "type": "promptString", "description": "問題URL（https://...）"},
+    {"id": "language", "type": "pickString", "description": "使用言語", "options": ["python", "cpp"], "default": "python"},
+    {"id": "judgeLanguageId", "type": "promptString", "description": "提出先の現在の言語ID（Python / C++の版まで確認）"}
+  ]
+}
