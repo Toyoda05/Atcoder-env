@@ -28,6 +28,61 @@ Codexはサイドバー、または `Ctrl+Shift+P` → `Codex: Open Codex Sideba
 C++例題は自作DSUとAC Libraryの両方を利用して比較します。
 この例題には提出先URLを設定していません。動作確認用コードを誤って送信しないためです。
 
+## AtCoderの全問題をまとめて準備する（ABC・ARC・AGC・AHCなど）
+
+`Tasks: Run Task` → **`CP: New contest (Python + C++)`** を選び、
+AtCoderの問題一覧URL（例: `https://atcoder.jp/contests/arc100/tasks`）を入力します。
+一覧に掲載された全問題について、Python・C++両方の解答用テンプレートを作成します。
+問題数や問題IDは一覧から取得するため、ABC・ARC・AGC・AHC、企業コンテスト、
+`typical90`・`tessoku-book`などの問題集にも同じ手順で対応します。
+コンテストIDと問題IDが異なる場合も、一覧の実際のリンクを使用します。
+
+Ubuntuのターミナルから実行する場合：
+
+```bash
+cd ~/competitive-programming
+.venv/bin/python tools/cp.py new-contest https://atcoder.jp/contests/arc100/tasks
+```
+
+例えばARC100のC問題の作成先は次のとおりです。他の全問題も同じ構成になります。
+
+```text
+contests/atcoder/arc100/arc100_a/
+├── python/
+│   ├── main.py
+│   ├── problem.json
+│   ├── input.txt
+│   └── test/
+└── cpp/
+    ├── main.cpp
+    ├── problem.json
+    ├── input.txt
+    └── test/
+```
+
+サンプルは1問につき1回取得し、新規作成した両言語のフォルダに保存します。
+取得に失敗しても全問題の解答用ファイルは残り、残りの問題の取得を続けます。
+失敗した場合は各言語のファイルで `CP: Download samples` を実行するか、後述の手順で手動保存してください。
+既存の言語フォルダは中身を変更せずスキップするため、再実行しても書きかけの解答を上書きしません。
+一括コマンドの再実行では、既存フォルダのサンプル取得もスキップします。
+
+サンプルが不要なら `--no-download` を付けます（問題一覧の取得には通信が必要です）。
+
+```bash
+.venv/bin/python tools/cp.py new-contest https://atcoder.jp/contests/arc100/tasks --no-download
+```
+
+問題一覧の取得に失敗した場合や、問題が未公開などでリンクが見つからない場合は、ファイルを作成せずエラーを表示します。
+練習時はCodexに問題一覧URLを送って「このコンテストを両言語で準備して」と依頼しても実行できます。
+生成するのは未実装のひな形です。作成後は `main.py` または `main.cpp` を編集し、通常のテスト・提出準備タスクを使用します。
+
+従来の `new-abc` コマンドと `CP: New ABC (Python + C++)` タスクも引き続き使えます（ABC専用）。
+ABC以外では `new-contest` または `CP: New contest (Python + C++)` を使用してください。
+一括準備はAtCoderの問題一覧に対応しています。他サイトの問題は `CP: New problem` で個別に準備します。
+
+AHCなどのスコア型・対話型問題でもテンプレートは作成できますが、スコア計算や専用テスタの実行は自動化しません。
+通常のサンプル出力比較で評価できない問題は、各問題で配布されるテスタ・ビジュアライザなどを使用してください。
+
 ## 問題を解く
 
 `Tasks: Run Task` → `CP: New problem` で問題URLと言語を選びます。

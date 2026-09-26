@@ -2,6 +2,22 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "CP: New contest (Python + C++)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "new-contest", "${input:contestTasksUrl}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "CP: New ABC (Python + C++)",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["${workspaceFolder}/tools/cp.py", "new-abc", "${input:abcTasksUrl}"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
       "label": "CP: New problem",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
@@ -94,6 +110,8 @@
     }
   ],
   "inputs": [
+    {"id": "contestTasksUrl", "type": "promptString", "description": "AtCoderの問題一覧URL（ABC・ARC・AGC・AHC等、例: https://atcoder.jp/contests/arc100/tasks）"},
+    {"id": "abcTasksUrl", "type": "promptString", "description": "ABCの問題一覧URL（例: https://atcoder.jp/contests/abc350/tasks）"},
     {"id": "problemUrl", "type": "promptString", "description": "問題URL（https://...）"},
     {"id": "language", "type": "pickString", "description": "使用言語", "options": ["python", "cpp"], "default": "python"},
     {"id": "judgeLanguageId", "type": "promptString", "description": "提出先の現在の言語ID（Python / C++の版まで確認）"}

@@ -3,6 +3,7 @@
 import argparse
 import ast
 import hashlib
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -12,7 +13,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from urllib.parse import urlsplit
+from urllib.error import URLError
+from urllib.parse import urljoin, urlsplit
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 PYLIB = ROOT / "lib/python"
@@ -217,15 +220,134 @@ def new_problem(args):
     relative = Path(args.name or name)
     target = (ROOT / "contests" / relative).resolve()
     target.relative_to((ROOT / "contests").resolve())
+    create_problem(target, url, args.lang)
+    if not args.no_download:
+        download(target, url)
+
+
+def create_problem(target, url, language):
     target.mkdir(parents=True, exist_ok=False)
-    suffix = ".py" if args.lang == "python" else ".cpp"
+    suffix = ".py" if language == "python" else ".cpp"
     shutil.copy2(ROOT / "templates" / ("main" + suffix), target / ("main" + suffix))
     (target / "problem.json").write_text(json.dumps({"url": url}, indent=2) + "\n", encoding="utf-8")
     (target / "test").mkdir()
     (target / "input.txt").touch()
     print(f"作成しました: {target}", flush=True)
-    if not args.no_download:
-        download(target, url)
+
+
+def contest_tasks_url(value):
+    parsed = urlsplit(problem_url(value))
+    match = re.fullmatch(r"/contests/([A-Za-z0-9_-]+)/tasks/?", parsed.path)
+    if parsed.netloc != "atcoder.jp" or not match:
+        raise ValueError("AtCoderの問題一覧URLを指定してください: https://atcoder.jp/contests/arc100/tasks")
+    return f"https://atcoder.jp/contests/{match[1]}/tasks"
+
+
+def abc_tasks_url(value):
+    parsed = urlsplit(problem_url(value))
+    match = re.fullmatch(r"/contests/(abc[0-9]+)/tasks/?", parsed.path)
+    if parsed.netloc != "atcoder.jp" or not match:
+        raise ValueError("ABCの問題一覧URLを指定してください: https://atcoder.jp/contests/abc350/tasks")
+    return f"https://atcoder.jp/contests/{match[1]}/tasks"
+
+
+class TaskLinks(HTMLParser):
+    def __init__(self, url):
+        super().__init__()
+        self.url = url
+        self.path = urlsplit(url).path + "/"
+        self.urls = []
+        self.seen = set()
+
+    def handle_starttag(self, tag, attrs):
+        if tag != "a":
+            return
+        href = dict(attrs).get("href")
+        if not href:
+            return
+        parsed = urlsplit(urljoin(self.url, href))
+        if parsed.scheme != "https" or parsed.netloc != "atcoder.jp":
+            return
+        if not parsed.path.startswith(self.path):
+            return
+        task_id = parsed.path[len(self.path):]
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", task_id):
+            return
+        url = "https://atcoder.jp" + parsed.path
+        if url not in self.seen:
+            self.seen.add(url)
+            self.urls.append(url)
+
+
+def fetch_contest_tasks(url):
+    request = Request(url, headers={"User-Agent": "cp-workflow/1.0"})
+    try:
+        with urlopen(request, timeout=30) as response:
+            html = response.read().decode("utf-8")
+    except (URLError, OSError, UnicodeError) as error:
+        raise ValueError(f"問題一覧を取得できませんでした: {url} ({error})") from error
+    parser = TaskLinks(url)
+    parser.feed(html)
+    if not parser.urls:
+        raise ValueError("問題一覧に問題リンクがありません。URL・問題の公開状況・ログインの必要性を確認してください")
+    return parser.urls
+
+
+def fetch_abc_tasks(url):
+    # Compatibility for callers of the original ABC helper.
+    return fetch_contest_tasks(url)
+
+
+def new_abc(args):
+    abc_tasks_url(args.url)
+    new_contest(args)
+
+
+def new_contest(args):
+    url = contest_tasks_url(args.url)
+    urls = fetch_contest_tasks(url)
+    contest = urlsplit(url).path.split("/")[2]
+    print(f"{contest}: {len(urls)}問 / Python・C++の両方を準備します", flush=True)
+    pending = []
+    created = skipped = 0
+    # Prepare every template before attempting sample downloads.
+    for task_url in urls:
+        task_id = urlsplit(task_url).path.rsplit("/", 1)[1]
+        targets = []
+        for language in ("python", "cpp"):
+            target = ROOT / "contests/atcoder" / contest / task_id / language
+            target.resolve().relative_to((ROOT / "contests").resolve())
+            if target.exists() or target.is_symlink():
+                print(f"既存のためスキップ: {target}", flush=True)
+                skipped += 1
+                continue
+            create_problem(target, task_url, language)
+            targets.append(target)
+            created += 1
+        if targets:
+            pending.append((task_url, targets))
+    print(f"解答フォルダ: 新規 {created} / 既存 {skipped}", flush=True)
+    if args.no_download:
+        return
+    failed = []
+    for task_url, targets in pending:
+        # Download once per problem and copy only into newly created folders.
+        try:
+            with tempfile.TemporaryDirectory(prefix="cp-samples-") as temp:
+                directory = Path(temp)
+                download(directory, task_url)
+                for target in targets:
+                    shutil.copytree(directory / "test", target / "test", dirs_exist_ok=True)
+                    if (directory / "input.txt").is_file():
+                        shutil.copy2(directory / "input.txt", target / "input.txt")
+        except (subprocess.CalledProcessError, OSError) as error:
+            print(f"サンプル取得・保存に失敗: {task_url} ({error})", file=sys.stderr)
+            failed.append(task_url)
+    if failed:
+        raise ValueError(
+            f"解答ファイルは作成済みです。{len(failed)}問のサンプル取得・保存に失敗しました。"
+            "各言語のmain.py / main.cppでdownloadコマンドを実行するか、手動でtest/に保存してください。"
+        )
 
 
 def download(directory, url):
@@ -247,6 +369,12 @@ def main(argv=None):
     new.add_argument("--lang", choices=["python", "cpp"], required=True)
     new.add_argument("--name", help="contests以下の保存先（既存フォルダは上書きしません）")
     new.add_argument("--no-download", action="store_true")
+    contest = commands.add_parser("new-contest", help="AtCoderの全問題をPython・C++の両方で一括作成")
+    contest.add_argument("url", help="https://atcoder.jp/contests/arc100/tasks 形式の問題一覧URL")
+    contest.add_argument("--no-download", action="store_true", help="サンプルを取得せず解答用ファイルのみ作成")
+    abc = commands.add_parser("new-abc", help="ABCの全問題をPython・C++の両方で一括作成")
+    abc.add_argument("url", help="https://atcoder.jp/contests/abc350/tasks 形式の問題一覧URL")
+    abc.add_argument("--no-download", action="store_true", help="サンプルを取得せず解答用ファイルのみ作成")
     for name in ("build", "run", "test", "bundle", "prepare", "download", "submit", "open", "copy"):
         cmd = commands.add_parser(name)
         cmd.add_argument("file")
@@ -265,6 +393,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.action == "new":
         new_problem(args)
+        return
+    if args.action == "new-contest":
+        new_contest(args)
+        return
+    if args.action == "new-abc":
+        new_abc(args)
         return
     if args.action == "doctor":
         for label, path in {"Python": PYTHON, "oj": OJ, "AC Library": ACL / "atcoder/all"}.items():
